@@ -84,7 +84,7 @@ if [ -f /etc/hostfiles.nodextra ]; then
   mv /usr/local/etc/tmp/DExtra_NoXRF_Hosts.txt ${DExtraHOSTS}
 fi
 
-# Grab DMR IDs
+# Get DMR IDs
 mv ${DMRIDFILE}.bz2 /tmp/
 bunzip2 -f /tmp/DMRIds.dat.bz2
 # filter out IDs less than 7 digits (causing collisions with TGs of < 7 digits in "Target" column"

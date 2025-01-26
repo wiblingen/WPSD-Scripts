@@ -14,7 +14,7 @@ fi
 if [[ ${modelName} == "arm"* ]] || [[ ${modelName} == "aarch"* ]]; then
     # Pull the Board revision from /proc/cpuinfo
     boardRev=$(grep 'Revision' /proc/cpuinfo | awk '{print $3}' | sed 's/^100//')
-    # Grab actual model name as well...as a fallback to $raspberryModel: /proc/device-tree/model
+    # Get actual model name as well...as a fallback to $raspberryModel: /proc/device-tree/model
     actualModel=$(grep 'Model' /proc/cpuinfo| cut -d' ' -f2- | sed 's/Rev/Rev./')
 
     # Make the board revision human readable
