@@ -80,8 +80,13 @@ if [[ ${modelName} == "arm"* ]] || [[ ${modelName} == "aarch"* ]]; then
 	*b03140) raspberryVer="CM4 Rev 1.0 2GB";;
 	*c03140) raspberryVer="CM4 Rev 1.0 4GB";;
 	*d03140) raspberryVer="CM4 Rev 1.0 8GB";;
+	*b04170) raspberryVer="2GB - Sony UK";; # Pi 5 2GB
+	*b04171) raspberryVer="2GB - Sony UK";; # Pi 5 2GB
 	*c04170) raspberryVer="4GB - Sony UK";; # Pi 5 4GB
+	*c04171) raspberryVer="4GB - Sony UK";; # Pi 5 4GB
 	*d04170) raspberryVer="8GB - Sony UK";; # Pi 5 8GB
+	*d04171) raspberryVer="8GB - Sony UK";; # Pi 5 8GB
+	*e04171) raspberryVer="16GB - Sony UK";; # Pi 5 16GB
 	*) raspberryVer="ARM-based System";;
     esac
 
