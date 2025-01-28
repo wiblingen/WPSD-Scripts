@@ -75,7 +75,7 @@ if [[ ${modelName} == "arm"* ]] || [[ ${modelName} == "aarch"* ]]; then
 	*d03114) raspberryVer="8GB - Sony UK";;
 	*a03115) raspberryVer="Ltd. Prod.";; # this was a very limited RPi4 B rev.1.5 run. Was pulled due to power mgmt issues, but we see a few in the wild :-/
 	*d03115) raspberryVer="8GB - Sony UK";;
-	*c03130) raspberryVer="4GB - Sony UK";;
+	*c03130) raspberryVer="400 Rev 1.0 4GB";;
 	*a03140) raspberryVer="CM4 Rev 1.0 1GB";;
 	*b03140) raspberryVer="CM4 Rev 1.0 2GB";;
 	*c03140) raspberryVer="CM4 Rev 1.0 4GB";;
@@ -87,6 +87,14 @@ if [[ ${modelName} == "arm"* ]] || [[ ${modelName} == "aarch"* ]]; then
 	*d04170) raspberryVer="8GB - Sony UK";; # Pi 5 8GB
 	*d04171) raspberryVer="8GB - Sony UK";; # Pi 5 8GB
 	*e04171) raspberryVer="16GB - Sony UK";; # Pi 5 16GB
+	*b04180) raspberryVer="CM5 Rev 1.0 2GB";;
+	*c04180) raspberryVer="CM5 Rev 1.0 4GB";;
+	*d04180) raspberryVer="CM5 Rev 1.0 8GB";;
+	*d04190) raspberryVer="500 Rev 1.0 8GB";;
+	*b041a0) raspberryVer="CM5 Lite Rev 1.0 2GB";;
+	*c041a0) raspberryVer="CM5 Lite Rev 1.0 4GB";;
+	*d041a0) raspberryVer="CM5 Lite Rev 1.0 8GB";;
+
 	*) raspberryVer="ARM-based System";;
     esac
 
