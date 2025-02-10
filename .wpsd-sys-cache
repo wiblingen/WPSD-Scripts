@@ -197,6 +197,9 @@ elif [[ "$LOG_LINE" =~ description:\ (MMDVM_MDO)\ ADF7021\ v([0-9.]+)\ ([0-9]{8}
 # Handle MMDVM with version including underscore and additional text
 elif [[ "$LOG_LINE" =~ description:\ (MMDVM\ ([0-9]{8}_[^ ]+)\ ([0-9.]+)) ]]; then
     MODEM_FIRMWARE="MMDVM-v.${BASH_REMATCH[2]}"
+# Handle MMDVM with date and feature list (STM32-DVM-MTR2K and STM32-DVM-MASTR3, etc.)
+elif [[ "$LOG_LINE" =~ description:\ MMDVM\ ([0-9]{8})\ \((.*?)\) ]]; then
+    MODEM_FIRMWARE="MMDVM-v.${BASH_REMATCH[1]}"
 # Handle MMDVM by G4KLX
 elif [[ "$LOG_LINE" =~ description:\ (MMDVM\ ([0-9]+)) ]]; then
     MODEM_FIRMWARE="MMDVM-v.${BASH_REMATCH[2]}"
@@ -219,7 +222,7 @@ fi
 MODEM_TCXO_FREQ=""
 # TCXO frequency
 if [[ "$LOG_LINE" == *"MHz"* ]]; then
-    MODEM_TCXO_FREQ=$(echo "$LOG_LINE" | grep -oP '\d{2,3}\.\d{3,4}\s?MHz')
+    MODEM_TCXO_FREQ=$(echo "$LOG_LINE" | grep -oP '\d+\.\d{4}\s?MHz')
     MODEM_TCXO_FREQ=$(echo "$MODEM_TCXO_FREQ" | sed 's/MHz/ MHz/')
 fi
 
