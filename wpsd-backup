@@ -1,0 +1,160 @@
+#!/bin/bash
+
+############################
+#                          #
+#   WPSD Backup            #
+#     By Carl, VK1KCM      #
+#                          #
+############################
+
+if [ "$(id -u)" != "0" ]; then
+  echo -e "You need to be root to run this command...\n"
+  exit 1
+fi
+
+source /usr/local/sbin/.wpsd-common-funcs
+
+function CreateBackup() {
+	backupDir="/tmp/config_backup";
+	backupZip="/tmp/config_backup.zip";
+	hostNameInfo=`cat /etc/hostname`
+    localdate=`date "+%Y-%b-%d"`
+
+    echo "Creating backup archive."
+	
+    rm -rf $backupZip
+    rm -rf $backupDir
+    mkdir $backupDir
+
+    cp /etc/wpa_supplicant/wpa_supplicant.conf $backupDir > /dev/null 2>&1
+    cp /etc/NetworkManager/system.connections/*.nmconnection $backupDir > /dev/null 2>&1
+    cp /etc/wpsd-upnp-rules $backupDir > /dev/null 2>&1
+    cp /etc/WPSD-Dashboard-Config.ini $backupDir > /dev/null 2>&1
+    cp /etc/hostapd/hostapd.conf $backupDir > /dev/null 2>&1
+    cp /etc/*css.ini $backupDir > /dev/null 2>&1
+    cp /etc/wpsd-release $backupDir > /dev/null 2>&1
+    cp /etc/aprsgateway $backupDir > /dev/null 2>&1
+    cp /etc/ircddbgateway $backupDir > /dev/null 2>&1
+    cp /etc/mmdvmhost $backupDir > /dev/null 2>&1
+    cp /etc/dapnetgateway $backupDir > /dev/null 2>&1
+    cp /etc/p25gateway $backupDir > /dev/null 2>&1
+    cp /etc/ysfgateway $backupDir > /dev/null 2>&1
+    cp /etc/dmr2nxdn $backupDir > /dev/null 2>&1
+    cp /etc/dmr2ysf $backupDir > /dev/null 2>&1
+    cp /etc/nxdn2dmr $backupDir > /dev/null 2>&1
+    cp /etc/ysf2dmr $backupDir > /dev/null 2>&1
+    cp /etc/dgidgateway $backupDir > /dev/null 2>&1
+    cp /etc/nxdngateway $backupDir > /dev/null 2>&1
+    cp /etc/m17gateway $backupDir > /dev/null 2>&1
+    cp /etc/ysf2nxdn $backupDir > /dev/null 2>&1
+    cp /etc/ysf2p25 $backupDir > /dev/null 2>&1
+    cp /etc/dmrgateway $backupDir > /dev/null 2>&1
+    cp /etc/starnetserver $backupDir > /dev/null 2>&1
+    cp /etc/timeserver $backupDir > /dev/null 2>&1
+    cp /etc/dstar-radio.* $backupDir > /dev/null 2>&1
+    cp /etc/pistar-remote $backupDir > /dev/null 2>&1
+    cp /etc/hosts $backupDir > /dev/null 2>&1
+    cp /etc/hostname $backupDir > /dev/null 2>&1
+    cp /etc/bmapi.key $backupDir > /dev/null 2>&1
+    cp /etc/dapnetapi.key $backupDir > /dev/null 2>&1
+    cp /etc/default/gpsd $backupDir > /dev/null 2>&1
+    cp /etc/*_paused $backupDir > /dev/null 2>&1
+    cp /etc/.bm_tgs.json.saved $backupDir > /dev/null 2>&1
+    cp /etc/.WPSD_config $backupDir > /dev/null 2>&1
+    cp /etc/timeserver.disable $backupDir > /dev/null 2>&1
+    cp /usr/local/etc/RSSI.dat $backupDir > /dev/null 2>&1
+    cp -a /etc/WPSD_config_mgr $backupDir > /dev/null 2>&1
+    find /root/ -maxdepth 1 -name '*Hosts.txt' -exec cp {} $backupDir \; > /dev/null 2>&1
+
+# Begin DV-Mega Cast logic to restore user cast settings
+    castResult=$(isDVmegaCast)
+    if [ "$castResult" == "true" ]; then
+        mkdir -p $backupDir/cast-settings > /dev/null 2>&1
+        sh -c 'cp -a \"/usr/local/cast/etc/\"* \"$backupDir/cast-settings/\"' > /dev/null 2>&1
+    fi
+
+    cd $backupDir
+    zip -rq $backupZip * > /dev/null 2>&1
+}
+
+function scpBackup() {
+    echo "Copying backup via scp to $1./WPSD_Config_$localdate.zip"
+    scp $backupZip $1./WPSD_Config_$localdate.zip
+
+}
+
+function copyBackup() {
+    echo "Copying backup via scp to $1./WPSD_Config_$localdate.zip"
+    cp $backupZip $1./WPSD_Config_$localdate.zip > /dev/null 2>&1
+}
+
+function DisplayHelp() {
+    echo "$(basename "$0") usage:"
+    echo ""
+    echo "  -h,   --help                       Display this help text."
+    echo "  -s    --scp  <remote adddress>     Send the backup somewhere via scp"
+    echo "  -c    --copy <directory>           Copy the backup to this directory"
+    echo ""
+    echo "One of the following two options must be specified."
+    echo "-s/--scp      This copies the backup to the remote host via scp.  You must"
+    echo "              configure scp/ssh keys properly to enable passwordless secure copy."
+    echo "              The address must be in the format <user>@<host>:<location>,"
+    echo "              for example, 'backupuser@backuphost.example.com:/backupdir'."
+    echo "              The <location> part is optional."
+    echo ""
+    echo "-c/--copy     This copies the backup file to the specified directory."
+    echo "              The directory must already exist."
+    echo "              This script does not monitor disk usage.  Copying the backups to a"
+    echo "              local file regularly will fill your SD Card.  It's up to you to"
+    echo "              manage that."
+    echo ""
+    echo "In both cases, the backup will be called 'WPSD_Config_YYYY-MMM-DD.zip' where"
+    echo "'YYYY-MMM-DD' is something like '2025-Feb-23'."
+    echo ""
+    echo "The backup can be restored by uploading the backup file via the web interface."
+}
+
+
+if [ $# -eq 0 ]; then
+    DisplayHelp
+    exit 1
+fi
+
+## Parse command line
+while [[ $# -gt 0 ]]; do
+    key="$1"
+
+    case $key in
+    "-s" | "--scp")
+        if [[ -z $2 || $2 == -* ]]; then
+            echo "Error: No remote host specified."
+            exit 1
+        fi
+        CreateBackup
+        scpBackup "$2"
+        exit 0
+        ;;
+
+    "-c" | "--copy")
+        if [[ -z $2 || $2 == -* ]]; then
+            echo "Error: No directory specified."
+            exit 1
+        fi
+        CreateBackup
+        copyBackup "$2"
+        exit 0
+        ;;
+
+    "-h" | "--help")
+        DisplayHelp
+        exit 0
+        ;;
+
+    *)
+        DisplayHelp;
+        exit 1
+        ;;
+    esac
+done
+
+exit 0
