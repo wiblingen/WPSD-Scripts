@@ -11,11 +11,17 @@ if [ "$(id -u)" != "0" ]; then
   exit 1
 fi
 
+source /usr/local/sbin/.wpsd-common-funcs
+
 # Setup some variables
 cmd=/usr/local/bin/remotecontrold
-#module=$(grep -m 1 'callsign=' /etc/dstarrepeater | awk -F "=" '/callsign/ {print $2}')
 callsign=$(grep -oP 'gatewayCallsign=\K[^ ]+' /etc/ircddbgateway)
-module="$callsign  B"
+castResult=$(isDVmegaCast)
+if [ "$castResult" == "true" ]; then
+    module="$callsign  E"
+else
+    module="$callsign  B"
+fi
 
 if [ -z "$1" ]
 then
