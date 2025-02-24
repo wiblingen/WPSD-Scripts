@@ -84,8 +84,8 @@ function scpBackup() {
 }
 
 function copyBackup() {
-    echo "Copying backup via scp to $1./WPSD_Config_$localdate.zip"
-    cp $backupZip $1./WPSD_Config_$localdate.zip > /dev/null 2>&1
+    echo "Copying backup via scp to $1/WPSD_Config_$localdate.zip"
+    cp $backupZip $1/WPSD_Config_$localdate.zip > /dev/null 2>&1
 }
 
 function DisplayHelp() {
