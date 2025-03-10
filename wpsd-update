@@ -267,6 +267,8 @@ perform_update() {
 
     echo -e "${BULL} Performing maintenance tasks..."
 
+    wpsd-hostfile update > /dev/null 2>&1
+
     # check if user already has firewall disabled, and if so, ensure it's kept that way.
     if [ "$fwState" == "enabled" ]; then
         /usr/local/sbin/wpsd-system-manager -efw > /dev/null 2>&1
