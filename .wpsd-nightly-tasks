@@ -11,6 +11,13 @@ fi
 
 source /usr/local/sbin/.wpsd-common-funcs
 
+OptIntoDiags_value=${OptIntoDiags_value:-true}
+
+if [ "$OptIntoDiags_value" != 'true' ] ; then
+    echo "User has opted out of updates and diagnostics. Exiting..."
+    exit 1
+fi
+
 if [ ! -t 1 ]; then
   exec &> /tmp/WPSD-nightly-tasks.log
 fi

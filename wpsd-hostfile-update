@@ -6,7 +6,7 @@
 #                                                     #
 #######################################################
 
-ProgVer="WPSD-HostFileUpdater v.4.2"
+ProgVer="WPSD-HostFileUpdater v.4.3"
 
 # Check if we are root
 if [ "$(id -u)" != "0" ];then
@@ -15,6 +15,13 @@ if [ "$(id -u)" != "0" ];then
 fi
 
 source /usr/local/sbin/.wpsd-common-funcs
+
+OptIntoDiags_value=${OptIntoDiags_value:-true}
+
+if [ "$OptIntoDiags_value" != 'true' ] ; then
+    echo "User has opted out of updates and diagnostics. Exiting..."
+    exit 1
+fi
 
 # check age of task marker file if it exists, and if it's < 8 hours young, bail.
 if [[ ${FORCE} -ne 1 ]] ; then # please be thoughtful here. This env. var. is called by a few places in the admin pages.
