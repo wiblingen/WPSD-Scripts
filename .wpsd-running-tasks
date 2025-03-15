@@ -13,11 +13,6 @@ source /usr/local/sbin/.wpsd-common-funcs
 
 OptIntoDiags_value=${OptIntoDiags_value:-true}
 
-if [ "$OptIntoDiags_value" != 'true' ] ; then
-    echo "User has opted out of updates and diagnostics. Exiting..."
-    exit 1
-fi
-
 if [ ! -t 1 ]; then
   exec &> /tmp/WPSD-running-tasks.log
 fi
@@ -65,7 +60,15 @@ if compgen -G "/tmp/Callsign_Name.txt*" > /dev/null; then
     fi
 fi
 
+# set default OS locale
+grep -qxF 'en_GB.UTF-8 UTF-8' /etc/locale.gen && grep -qxF 'LANG=en_GB.UTF-8' /etc/default/locale || { echo 'en_GB.UTF-8 UTF-8' | sudo tee -a /etc/locale.gen && sudo locale-gen && sudo update-locale LANG=en_GB.UTF-8; }
+
 # Generate /etc/motd
 /usr/local/sbin/.wpsd-motdgen
+
+if [ "$OptIntoDiags_value" != 'true' ] ; then
+    echo "User has opted out of updates and diagnostics. Exiting..."
+    exit 1
+fi
 
 /usr/local/sbin/.wpsd-slipstream-tasks
