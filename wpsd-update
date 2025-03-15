@@ -23,6 +23,13 @@ script_name=$(basename "$0")
 
 source /usr/local/sbin/.wpsd-common-funcs
 
+OptIntoDiags_value=${OptIntoDiags_value:-true}
+
+if [ "$OptIntoDiags_value" != 'true' ] ; then
+    echo "User has opted out of updates and diagnostics. Exiting..."
+    exit 1
+fi
+
 export GIT_HTTP_CONNECT_TIMEOUT="10"
 export GIT_HTTP_USER_AGENT="WPSD-Update (Manual-Update) Ver.# ${dashVer} Call:${CALL} UUID:${uuidStr} [${osName}]"
 
