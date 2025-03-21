@@ -1,0 +1,22 @@
+#!/bin/bash
+
+#
+# This cleans up the prior day's MMVMhost log file when it's rotated baefore an "end of TX" is written
+# which prevents phantom infinite TXs on the dashboard
+#
+
+yesterday=$(date -u -d "yesterday" +"%Y-%m-%d")
+
+logfile="/var/log/pi-star/MMDVMHost-/MMDVM-${yesterday}.log"
+
+if [ ! -f "$logfile" ]; then
+    exit 1
+fi
+
+last_line=$(tail -n 1 "$logfile")
+if echo "$last_line" | grep -q "received network data from"; then
+    total_lines=$(wc -l < "$logfile")
+    sed -i "${total_lines}d" "$logfile"
+fi
+
+exit 0
