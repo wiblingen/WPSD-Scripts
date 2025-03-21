@@ -7,7 +7,7 @@
 
 yesterday=$(date -u -d "yesterday" +"%Y-%m-%d")
 
-logfile="/var/log/pi-star/MMDVMHost-/MMDVM-${yesterday}.log"
+logfile="/var/log/WPSD/MMDVMHost-/MMDVM-${yesterday}.log"
 
 if [ ! -f "$logfile" ]; then
     exit 1
