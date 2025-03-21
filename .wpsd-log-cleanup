@@ -10,7 +10,7 @@ yesterday=$(date -u -d "yesterday" +"%Y-%m-%d")
 logfile="/var/log/WPSD/MMDVMHost-/MMDVM-${yesterday}.log"
 
 if [ ! -f "$logfile" ]; then
-    exit 1
+    exit 0
 fi
 
 last_line=$(tail -n 1 "$logfile")
