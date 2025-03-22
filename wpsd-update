@@ -411,11 +411,25 @@ perform_update() {
 if [ -t 1 ]; then
     # run via terminal, only output to screen
     export FORCE_COLOR=1
-    term_banner
-    perform_update "$@"
+    if [ "$OptIntoDiags_value" != 'true' ] ; then
+	echo -e "\nExiting...\n"
+	echo "You have opted out of updates and diagnostics."
+	echo -e "To enable updates, you must opt-in via the Configuration Page.\n"
+	exit 1
+    else
+	term_banner
+	perform_update "$@"
+    fi
 else
     # if not run via terminal, log everything into a log file
-     perform_update >> /var/log/pi-star/WPSD-update.log 2>&1
+    if [ "$OptIntoDiags_value" != 'true' ] ; then
+	echo -e "\nExiting...\n" | tee -a /var/log/pi-star/WPSD-update.log
+	echo "You have opted out of updates and diagnostics." | tee -a /var/log/pi-star/WPSD-update.log
+	echo -e "To enable updates, you must opt-in via the <a style='color:white;text-decoration:underline;'' href='/admin/configure.php#diagsOptForm'>Configuration Page</a>.\n" | tee -a /var/log/pi-star/WPSD-update.log
+	exit 1
+    else
+	perform_update >> /var/log/pi-star/WPSD-update.log 2>&1
+    fi
 fi
 
 exit 0
