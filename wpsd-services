@@ -22,8 +22,7 @@ function status_services() {
 	"ysfparrot.service" "ysf2dmr.service" "ysf2p25.service" "ysf2nxdn.service"
 	"dmr2ysf.service" "dmr2m17.service" "dmr2nxdn.service" "nxdn2dmr.service" "aprsgateway.service"
 	"gpsd.service" "gpsd.socket" "timeserver.service" "cron.service" "pistar-remote.timer"
-	"pistar-remote.service" "wpsd-running-tasks.service" "wpsd-running-tasks.timer" "wpsd-nightly-tasks.service"
-	"wpsd-cache.timer" "wpsd-nightly-tasks.timer")
+	"pistar-remote.service" "wpsd-running-tasks.timer" "wpsd-cache.timer" "wpsd-nightly-tasks.timer" "wpsd-hostfile-update.timer")
     
     for s in "${services[@]}"; do
 	status=$(systemctl is-active "$s" | tr [a-z] [A-Z])
@@ -76,6 +75,7 @@ function stop_services()
     systemctl stop gpsd.socket > /dev/null 2>&1
     systemctl stop timeserver.service > /dev/null 2>&1
     systemctl stop nextiondriver.service > /dev/null 2>&1
+    systemctl stop wpsd-hostfile-update.timer > /dev/null 2>&1
 
     if [ -t 1 ] ; then
 	echo -e "DONE."
@@ -95,6 +95,7 @@ function start_services()
 	sleep 1
     fi
  
+    systemctl start wpsd-hostfile-update.timer > /dev/null 2>&1
     systemctl start nextiondriver-shutdown.service > /dev/null 2>&1
     systemctl start nextiondriver.service > /dev/null 2>&1
     systemctl start gpsd.socket > /dev/null 2>&1
