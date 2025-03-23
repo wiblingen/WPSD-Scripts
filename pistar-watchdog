@@ -4,201 +4,125 @@
 #                                                                         #
 #                         WPSD Service Watchdog                           #
 #                                                                         #
-#                       Refactored for Py3 - W0CHP                        #
+#                     Refactored Big Time by - W0CHP                      #
 #                                                                         #
 ###########################################################################
 
 import subprocess
 import time
 import os
-import linecache
-import datetime
 import configparser
 
-time.sleep(90) #Assuming the host has just started up, let the services settle...
+time.sleep(90)  # Let services settle after startup
 
-# Get the disk usage
-def disk_stat(path):
-    disk = os.statvfs(path)
-    percent = (disk.f_blocks - disk.f_bfree) * 100 / (disk.f_blocks -disk.f_bfree + disk.f_bavail) + 1
-    return percent
+# Function to check if a service is enabled in the MMDVMHost config
+def is_service_enabled(config, section, option="Enable"):
+    try:
+        if config.has_section(section) and config.has_option(section, option):
+            return config.getboolean(section, option)
+        return False
+    except (configparser.NoSectionError, configparser.NoOptionError, ValueError):
+        return False
 
-while True: #Main loop
-	# Get the current status
-	mmdvmhost = "/etc/dstar-radio.mmdvmhost"
-	utcnow = datetime.datetime.utcnow()
-	datenow = utcnow.strftime('%Y-%m-%d')
-	mmdvmLog = '/var/log/pi-star/MMDVM-' + datenow + '.log'
+# Function to check if MMDVMHost should be managed
+def is_mmdvmhost_enabled():
+    config_path = "/etc/dstar-radio.mmdvmhost"
+    if not os.path.isfile(config_path):
+        return False
 
-	# Check the disk usage
-	if disk_stat('/var/log') > 90:
-		# Clean up the log volume
-		os.system('rm -rf /var/log/*.1.gz')
-		os.system('rm -rf /var/log/*.1')
-		os.system('rm -f $(find /var/log/pi-star/*.log -type f -mtime +2 -print)')
-		os.system('rm -f $(find /var/log/ -type f -mtime +0 -print | grep .gz)')
-		# Shorten the Pi-Star logs
-		if os.path.isfile(mmdvmhost):
-			if os.path.isfile(mmdvmLog):
-				os.system('echo "$(tail -1500 /var/log/pi-star/MMDVM-$(date +%F).log)" > /var/log/pi-star/MMDVM-$(date +%F).log')
-			os.system('/bin/systemctl restart mmdvmhost.service')
-			time.sleep(60) # Give the service 60 secs before we re-test
+    config = configparser.ConfigParser()
+    config.read(config_path)
+    return config.has_section("Modem") and config.get("Modem", "Hardware", fallback="").strip() != ""
 
-	# Check the MMDVMHost Specific Services
-	if os.path.isfile(mmdvmhost):
-		# first, let's ensure the mmdvmhost startup script is NOT running...
-		check_mmdvmhost_service = subprocess.Popen('pgrep -f "/usr/local/sbin/mmdvmhost.service"', shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-		if len(check_mmdvmhost_service.stdout.readlines()) > 1:  # Check for more than one line of output
-			print("/usr/local/sbin/mmdvmhost.service is already running, skipping restart.")
-		else: #  mmdvmhost startup script is NOT running - continue...
-			checkprocmmdvm = subprocess.Popen('pgrep' + ' MMDVMHost', shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-			if not checkprocmmdvm.stdout.readlines():
-				os.system('/bin/systemctl stop mmdvmhost.service')
-				time.sleep(2) #Give the service time to stop before we move on
-				os.system('/bin/systemctl start mmdvmhost.service')
-				time.sleep(10) #Give the service time to start before we move on
-				checkprocmmdvm.wait()
-		
-		checkprocdmrgateway = subprocess.Popen('pgrep' + ' DMRGateway', shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-		if not checkprocdmrgateway.stdout.readlines():
-			os.system('/bin/systemctl stop dmrgateway.service')
-			time.sleep(2) #Give the service time to stop before we move on
-			os.system('/bin/systemctl start dmrgateway.service')
-			time.sleep(10) #Give the service time to start before we move on
-		checkprocdmrgateway.wait()
+# Function to check if a cross-mode service is enabled
+def is_crossmode_enabled(service_name):
+    config_path = f"/etc/{service_name.lower()}"  # Example: /etc/dmr2ysf
+    if not os.path.isfile(config_path):
+        return False
 
-		checkprocysfgateway = subprocess.Popen('pgrep' + ' YSFGateway', shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-		if not checkprocysfgateway.stdout.readlines():
-			os.system('/bin/systemctl stop ysfgateway.service')
-			time.sleep(2) #Give the service time to stop before we move on
-			os.system('/bin/systemctl start ysfgateway.service')
-			time.sleep(10) #Give the service time to start before we move on
-		checkprocysfgateway.wait()
+    config = configparser.ConfigParser()
+    config.read(config_path)
+    return config.has_option("Enabled", "Enabled") and config.get("Enabled", "Enabled", fallback="0") == "1"
 
-		checkprocdgidgateway = subprocess.Popen('pgrep' + ' DGIdGateway', shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-		if not checkprocdgidgateway.stdout.readlines():
-			os.system('/bin/systemctl stop dgidgateway.service')
-			time.sleep(2) #Give the service time to stop before we move on
-			os.system('/bin/systemctl start dgidgateway.service')
-			time.sleep(10) #Give the service time to start before we move on
-		checkprocdgidgateway.wait()
+# Function to check and restart a service if needed.
+# 'binary_name' is used for checking the running process,
+# while 'service_name' (in lowercase) is used for systemctl commands.
+def check_and_restart_service(binary_name, service_name):
+    check_proc = subprocess.run(f'pgrep {binary_name}', shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    if check_proc.returncode != 0:  # If the service is NOT running
+        msg = f"{binary_name} is not running. Restarting {binary_name} service..."
+        print(f"[INFO] {msg}")
+        os.system(f'logger -t WPSD-Watchdog "{msg}"')
+        os.system(f'/bin/systemctl stop {service_name}.service > /dev/null 2>&1')
+        time.sleep(1)
+        os.system(f'/bin/systemctl start {service_name}.service > /dev/null 2>&1')
+        time.sleep(5)
 
-		checkprocp25gateway = subprocess.Popen('pgrep' + ' P25Gateway', shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-		if not checkprocp25gateway.stdout.readlines():
-			os.system('/bin/systemctl stop p25gateway.service')
-			time.sleep(2) #Give the service time to stop before we move on
-			os.system('/bin/systemctl start p25gateway.service')
-			time.sleep(10) #Give the service time to start before we move on
-		checkprocp25gateway.wait()
+# Function to handle cross-mode dependencies and service restart
+def handle_crossmode_dependencies(service_name):
+    # Define the service dependencies for each cross-mode service using proper binary names.
+    # These names match the keys in your services dictionary.
+    dependencies = {
+        'ysf2dmr': ['YSFGateway', 'DMRGateway'],
+        'ysf2nxdn': ['YSFGateway', 'NXDNGateway'],
+        'ysf2p25': ['YSFGateway', 'P25Gateway'],
+        'dmr2ysf': ['DMRGateway', 'YSFGateway'],
+        'dmr2nxdn': ['DMRGateway', 'NXDNGateway']
+    }
 
-		checkprocm17gateway = subprocess.Popen('pgrep' + ' M17Gateway', shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-		if not checkprocm17gateway.stdout.readlines():
-			os.system('/bin/systemctl stop m17gateway.service')
-			time.sleep(2) #Give the service time to stop before we move on
-			os.system('/bin/systemctl start m17gateway.service')
-			time.sleep(10) #Give the service time to start before we move on
-		checkprocm17gateway.wait()
+    service_key = service_name.lower()
+    # Check and restart the dependencies first
+    if service_key in dependencies:
+        for dep_service in dependencies[service_key]:
+            #print(f"[INFO] Checking {dep_service} service for {service_name} dependency.")
+            # Use the proper binary name (dep_service) and the lowercase version for the systemd unit.
+            check_and_restart_service(dep_service, dep_service.lower())
 
-		checkprocysfparrot = subprocess.Popen('pgrep' + ' YSFParrot', shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-		if not checkprocysfparrot.stdout.readlines():
-			os.system('/bin/systemctl stop ysfparrot.service')
-			time.sleep(2) #Give the service time to stop before we move on
-			os.system('/bin/systemctl start ysfparrot.service')
-			time.sleep(10) #Give the service time to start before we move on
-		checkprocysfparrot.wait()
+    # Now check and restart the cross-mode service itself.
+    #print(f"[INFO] Checking {service_name} service.")
+    # For cross-mode service, the binary is as provided and the unit name is its lowercase.
+    check_and_restart_service(service_name, service_name.lower())
 
-		checkprocp25parrot = subprocess.Popen('pgrep' + ' P25Parrot', shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-		if not checkprocp25parrot.stdout.readlines():
-			os.system('/bin/systemctl stop p25parrot.service')
-			time.sleep(2) #Give the service time to stop before we move on
-			os.system('/bin/systemctl start p25parrot.service')
-			time.sleep(10) #Give the service time to start before we move on
-		checkprocp25parrot.wait()
+while True:  # Main loop
+    mmdvmhost_config = "/etc/mmdvmhost"
 
-		checkprocysf2dmr = subprocess.Popen('pgrep' + ' YSF2DMR', shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-		if not checkprocysf2dmr.stdout.readlines():
-			os.system('/bin/systemctl stop ysf2dmr.service')
-			time.sleep(2) #Give the service time to stop before we move on
-			os.system('/bin/systemctl start ysf2dmr.service')
-			time.sleep(10) #Give the service time to start before we move on
-		checkprocysf2dmr.wait()
+    # Load MMDVMHost configuration
+    mmdvm_config = configparser.ConfigParser()
+    if os.path.isfile(mmdvmhost_config):
+        mmdvm_config.read(mmdvmhost_config)
 
-		checkprocysf2nxdn = subprocess.Popen('pgrep' + ' YSF2NXDN', shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-		if not checkprocysf2nxdn.stdout.readlines():
-			os.system('/bin/systemctl stop ysf2nxdn.service')
-			time.sleep(2) #Give the service time to stop before we move on
-			os.system('/bin/systemctl start ysf2nxdn.service')
-			time.sleep(10) #Give the service time to start before we move on
-		checkprocysf2nxdn.wait()
+    # Standard MMDVMHost services to check
+    services = {
+        "ircddbgateway": ["D-Star Network"],
+        "timeserver": ["Time Server"],
+        "DMRGateway": ["DMR Network"],
+        "NXDNGateway": ["NXDN Network"],
+        "P25Gateway": ["P25 Network"],
+        "YSFGateway": ["System Fusion Network"],
+        "YSFParrot": ["System Fusion Network"],
+        "NXDNParrot": ["NXDN Network"],
+        "P25Parrot": ["P25 Network"],
+        "DAPNETGateway": ["DAPNET"],
+        "M17Gateway": ["M17 Network"]
+    }
 
-		checkprocysf2p25 = subprocess.Popen('pgrep' + ' YSF2P25', shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-		if not checkprocysf2p25.stdout.readlines():
-			os.system('/bin/systemctl stop ysf2p25.service')
-			time.sleep(2) #Give the service time to stop before we move on
-			os.system('/bin/systemctl start ysf2p25.service')
-			time.sleep(10) #Give the service time to start before we move on
-		checkprocysf2p25.wait()
+    # Check and restart MMDVMHost separately (special condition)
+    if is_mmdvmhost_enabled():
+        check_and_restart_service("MMDVMHost", "mmdvmhost")
 
-		checkprocdmr2ysf = subprocess.Popen('pgrep' + ' DMR2YSF', shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-		if not checkprocdmr2ysf.stdout.readlines():
-			os.system('/bin/systemctl stop dmr2ysf.service')
-			time.sleep(2) #Give the service time to stop before we move on
-			os.system('/bin/systemctl start dmr2ysf.service')
-			time.sleep(10) #Give the service time to start before we move on
-		checkprocdmr2ysf.wait()
+    # Check and restart non-cross-mode services
+    for binary, config_section in services.items():
+        service_unit = binary.lower()  # Systemd unit names are lowercase
+        if any(is_service_enabled(mmdvm_config, section) for section in config_section):
+            check_and_restart_service(binary, service_unit)
 
-		checkprocdmr2nxdn = subprocess.Popen('pgrep' + ' DMR2NXDN', shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-		if not checkprocdmr2nxdn.stdout.readlines():
-			os.system('/bin/systemctl stop dmr2nxdn.service')
-			time.sleep(2) #Give the service time to stop before we move on
-			os.system('/bin/systemctl start dmr2nxdn.service')
-			time.sleep(10) #Give the service time to start before we move on
-		checkprocdmr2nxdn.wait()
+    # Cross-mode services (check for Enabled=1)
+    cross_modes = ["YSF2DMR", "YSF2NXDN", "YSF2P25", "DMR2YSF", "DMR2NXDN"]
 
-		checkprocdapnetgateway = subprocess.Popen('pgrep' + ' DAPNETGateway', shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-		if not checkprocdapnetgateway.stdout.readlines():
-			os.system('/bin/systemctl stop dapnetgateway.service')
-			time.sleep(2) #Give the service time to stop before we move on
-			os.system('/bin/systemctl start dapnetgateway.service')
-			time.sleep(10) #Give the service time to start before we move on
-		checkprocdapnetgateway.wait()
+    for service in cross_modes:
+        if is_crossmode_enabled(service):
+            #print(f"[INFO] {service} is enabled. Checking dependencies and service restart.")
+            handle_crossmode_dependencies(service)
 
-	# Check the services that can be used by all systems
-	checkprocaprs = subprocess.Popen('pgrep' + ' APRSGateway', shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-	if not checkprocaprs.stdout.readlines():
-		os.system('/bin/systemctl stop aprsgateway.service')
-		time.sleep(2) #Give the service time to stop before we move on
-		os.system('/bin/systemctl start aprsgateway.service')
-		time.sleep(10) #Give the service time to start before we move on
-	checkprocaprs.wait()
-        
-	checkprocirc = subprocess.Popen('pgrep' + ' ircddbgatewayd', shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-	if not checkprocirc.stdout.readlines():
-		os.system('/bin/systemctl stop ircddbgateway.service')
-		time.sleep(2) #Give the service time to stop before we move on
-		os.system('/bin/systemctl start ircddbgateway.service')
-		time.sleep(10) #Give the service time to start before we move on
-	checkprocirc.wait()
+    time.sleep(120)  # Wait before next check
 
-	checkproctime = subprocess.Popen('pgrep' + ' timeserverd', shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-	if not checkproctime.stdout.readlines():
-		os.system('/bin/systemctl stop timeserver.service')
-		time.sleep(2) #Give the service time to stop before we move on
-		os.system('/bin/systemctl start timeserver.service')
-		time.sleep(10) #Give the service time to start before we move on
-	checkproctime.wait()
-
-	# If PiStar-Remote not enabled, dont try and keep it running
-	pistarRemoteConfig = configparser.RawConfigParser()
-	pistarRemoteConfig.read('/etc/pistar-remote')
-	isEnabled = pistarRemoteConfig.get('enable', 'enabled')
-	if isEnabled == 'true':
-	    checkprocremote_bytes = subprocess.check_output(['/usr/local/sbin/pistar-remote.service', 'status'])
-	    checkprocremote = checkprocremote_bytes.decode('utf-8')  # Decode bytes to string
-	    if "not" in checkprocremote:
-	        os.system('/bin/systemctl stop pistar-remote.service')
-	        time.sleep(2) # Give the service time to stop before we move on
-	        os.system('/bin/systemctl start pistar-remote.service')
-	        time.sleep(10) # Give the service time to start before we move on
-
-	time.sleep(120) #Time to wait between service checks
