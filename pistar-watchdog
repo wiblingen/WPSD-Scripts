@@ -3,8 +3,7 @@
 ###########################################################################
 #                                                                         #
 #                         WPSD Service Watchdog                           #
-#                                                                         #
-#                     Refactored Big Time by - W0CHP                      #
+#                           Authored by W0CHP                             #
 #                                                                         #
 ###########################################################################
 
@@ -34,9 +33,9 @@ def is_mmdvmhost_enabled():
     config.read(config_path)
     return config.has_section("Modem") and config.get("Modem", "Hardware", fallback="").strip() != ""
 
-# Function to check if a cross-mode service is enabled
-def is_crossmode_enabled(service_name):
-    config_path = f"/etc/{service_name.lower()}"  # Example: /etc/dmr2ysf
+# Function to check if a cross-mode service or APRSGateway is enabled
+def is_service_config_enabled(service_name):
+    config_path = f"/etc/{service_name.lower()}"  # Example: /etc/dmr2ysf or /etc/aprsgateway
     if not os.path.isfile(config_path):
         return False
 
@@ -61,7 +60,7 @@ def check_and_restart_service(binary_name, service_name):
 # Function to handle cross-mode dependencies and service restart
 def handle_crossmode_dependencies(service_name):
     # Define the service dependencies for each cross-mode service using proper binary names.
-    # These names match the keys in your services dictionary.
+    # These names match the keys in the services dictionary.
     dependencies = {
         'ysf2dmr': ['YSFGateway', 'DMRGateway'],
         'ysf2nxdn': ['YSFGateway', 'NXDNGateway'],
@@ -74,13 +73,9 @@ def handle_crossmode_dependencies(service_name):
     # Check and restart the dependencies first
     if service_key in dependencies:
         for dep_service in dependencies[service_key]:
-            #print(f"[INFO] Checking {dep_service} service for {service_name} dependency.")
-            # Use the proper binary name (dep_service) and the lowercase version for the systemd unit.
             check_and_restart_service(dep_service, dep_service.lower())
 
     # Now check and restart the cross-mode service itself.
-    #print(f"[INFO] Checking {service_name} service.")
-    # For cross-mode service, the binary is as provided and the unit name is its lowercase.
     check_and_restart_service(service_name, service_name.lower())
 
 while True:  # Main loop
@@ -120,9 +115,11 @@ while True:  # Main loop
     cross_modes = ["YSF2DMR", "YSF2NXDN", "YSF2P25", "DMR2YSF", "DMR2NXDN"]
 
     for service in cross_modes:
-        if is_crossmode_enabled(service):
-            #print(f"[INFO] {service} is enabled. Checking dependencies and service restart.")
+        if is_service_config_enabled(service):
             handle_crossmode_dependencies(service)
 
-    time.sleep(120)  # Wait before next check
+    # Check and restart APRSGateway if enabled
+    if is_service_config_enabled("APRSGateway"):
+        check_and_restart_service("APRSGateway", "aprsgateway")
 
+    time.sleep(120)  # Wait before next check
