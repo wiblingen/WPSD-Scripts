@@ -408,6 +408,7 @@ perform_update() {
 }
 
 # Do the deeds, y0!
+OptIntoDiags_value=${OptIntoDiags_value:-true}
 if [ -t 1 ]; then
     # run via terminal, only output to screen
     export FORCE_COLOR=1
