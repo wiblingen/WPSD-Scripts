@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
 #
-# (C) 2025, by Lucas Burns, AE0LI
+# (C) 2025, by Lucas Burns, AE0LI; Chip Cuccio, W0CHP
 #
 
 import serial
@@ -17,8 +17,8 @@ def MakeNextionCommand(commandString: str):
     result.extend([0xff, 0xff, 0xff])
     return result
 
-def MakeSetTextCommandString(item, value):
-    commandString = item
+def MakeSetTextCommandString(field, value):
+    commandString = field
     commandString += ".txt=\""
     commandString += value
     commandString += "\""
@@ -36,8 +36,8 @@ def MakeModemCommand(nextionCommand: bytearray):
 def SendModemCommand(mmdvmCommand: bytearray, serialInterface: serial.Serial):
     serialInterface.write(mmdvmCommand)
 
-def SetTextValue(item, value, serialInterface: serial.Serial):
-    command = MakeModemCommand(MakeNextionCommand(MakeSetTextCommandString(item, value)))
+def SetTextValue(field, value, serialInterface: serial.Serial):
+    command = MakeModemCommand(MakeNextionCommand(MakeSetTextCommandString(field, value)))
     SendModemCommand(command, serialInterface)
 
 if __name__ == "__main__":
@@ -45,16 +45,17 @@ if __name__ == "__main__":
     programPath = sys.argv[0]
     programName = os.path.basename(programPath)
 
-    if (len(sys.argv) < 3):
-        print(f"Usage: {programName} <port> <text value>")
+    if (len(sys.argv) < 4):
+        print(f"Usage: {programName} <port> <field> <text value>")
         sys.exit()
 
     port = sys.argv[1]
-    textValue = sys.argv[2]
+    field = sys.argv[2]
+    textValue = sys.argv[3]
 
     try:
         serialInterface = serial.Serial(port = port, baudrate=MODEM_BAUDRATE)
-        SetTextValue("t0", textValue, serialInterface=serialInterface)
+        SetTextValue(field, textValue, serialInterface=serialInterface)
         serialInterface.close()
 
     except serial.SerialException as e:
