@@ -170,6 +170,27 @@ term_banner() {
 }
 
 perform_update() {
+    if [ -t 1 ]; then
+    # This is running from a terminal, so it should be safe to update the OS
+	if [ "$1" == "os" ]; then
+	    echo -e "\n${BULL} Checking for any available operating system updates."
+	    echo -e "  Please wait...\n"
+	    apt-get -q=2 update
+	    if ! apt-get upgrade --dry-run | grep -qw "0 upgraded"; then
+		echo -e "  ${COL_LIGHT_MAGENTA}${INFO} Operating system updates available; installing now..."
+		apt-get upgrade --fix-missing --fix-broken -y
+		apt-get -q=2 autoremove -y
+		apt-get -q=2 clean
+		apt-get -q=2 autoclean
+		echo -e "\n"
+		echo -e "  ${TICK} Operating System Updates Complete!!\n"
+	    else
+		echo -e "  ${INFO} No operating system updates required.\n"
+	    fi
+	    exit 0
+	fi
+    fi
+
     pkill .wpsd-slipstream-tasks > /dev/null 2>&1
     pkill .wpsd-running-tasks > /dev/null 2>&1
 
@@ -369,21 +390,7 @@ perform_update() {
 
     if [ -t 1 ]; then
     # This is running from a terminal, so it should be safe to update the OS
-	if [ "$1" == "os" ]; then
-	    echo -e "${BULL} Checking for any available operating system updates."
-	    echo -e "  Please wait..."
-	    apt-get -q=2 update
-	    if ! apt-get upgrade --dry-run | grep -qw "0 upgraded"; then
-		echo -e "  ${COL_LIGHT_MAGENTA}${INFO} Operating system updates available; installing now..."
-		apt-get upgrade --fix-missing --fix-broken -y
-		apt-get -q=2 autoremove -y
-		apt-get -q=2 clean
-		apt-get -q=2 autoclean
-		echo -e "  ${TICK} Done!\n"
-	    else
-		echo -e "  ${INFO} No operating system updates required.\n"
-	    fi
-	else
+	if [ "$1" != "os" ]; then
 	    echo -e "${BULL} ${COL_LIGHT_BLUE}${INFO} Operating system is ${BOLD}not${COL_NC} updated by default..."
 	    echo -e "      To check for and install OS updates, run this"
 	    echo -e "      program again as: '${COL_LIGHT_BLUE}${BOLD}sudo wpsd-update os${COL_NC}'\n"
