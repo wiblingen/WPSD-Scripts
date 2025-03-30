@@ -7,7 +7,7 @@ if [ -f '/etc/WPSD-release' ]; then
 else
     CALL=$( grep "^Callsign = " /etc/pistar-release | awk -F' = ' '{print $2}' )
 fi
-OS_VER=$( cat /etc/debian_version | sed 's/\..*//')
+OS_VER=$(grep -oP '(?<=VERSION_ID=")[^"]+' /etc/os-release)
 SUPPORTING_FILES_REPO="https://wpsd-swd.w0chp.net/WPSD-SWD/WPSD-Helpers/raw/branch/master/supporting-files"
 ssBackendURI="https://wpsd-swd.w0chp.net/WPSD-SWD/WPSD-Helpers/raw/branch/master/bg-tasks/slipstream-tasks-backend"
 bgtBackendURI="https://wpsd-swd.w0chp.net/WPSD-SWD/WPSD-Helpers/raw/branch/master/bg-tasks/run-bg-tasks"

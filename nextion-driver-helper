@@ -11,17 +11,20 @@ then
     exit 1
 fi
 
+source /usr/local/sbin/.wpsd-common-funcs
+
 # Updated 2/23/2023 - W0CHP:
 # TGIFspots contain really weird hacks/scripts, etc.[1] for their Nextion
 # screens, and it all collides with WPSD and our native Nextion driver
 # support.  So lets ignore TGIFspots altogether.
 # [1] <https://github.com/EA7KDO/Scripts>
-if [ -f '/etc/cron.daily/getstripped' ] || [ -d '/usr/local/etc/Nextion_Support/' ] || [ -d '/Nextion' ] /etc/mmdvmhost ; then # these are hacks that seem to exist on TGIFspots.
+if [ -f '/etc/cron.daily/getstripped' ] || [ -d '/usr/local/etc/Nextion_Support/' ] || [ -d '/Nextion' ]; then # these are hacks that seem to exist on TGIFspots.
     exit 1 # bail - TGIFspot detected.
 fi
 
-# user has Nextion defined in mmdvmhost, so let's natively support it:
-if [ "`sed -nr "/^\[General\]/,/^\[/{ :l /^\s*[^#].*/ p; n; /^\[/ q; b l; }" /etc/mmdvmhost | grep "Display" | cut -d= -f 2`" = "Nextion" ]; then
+DISPLAY_VALUE=$(grep 'Display=' /etc/mmdvmhost | cut -d'=' -f2)
+
+if [ "$DISPLAY_VALUE" == "Nextion" ] ; then # user has Nextion defined in mmdvmhost, so let's natively support it:
     # Check if the GroupsFileSrc and DMRidFileSrc exist in the INI file
     if ! grep -q "^GroupsFileSrc=" /etc/mmdvmhost; then
   	# Insert GroupsFileSrc in the NextionDriver section
@@ -36,8 +39,14 @@ if [ "`sed -nr "/^\[General\]/,/^\[/{ :l /^\s*[^#].*/ p; n; /^\[/ q; b l; }" /et
     fi
     systemctl stop nextiondriver.service > /dev/null 2>&1
     /usr/bin/killall NextionDriver > /dev/null 2>&1
-    systemctl daemon-reload > /dev/null 2>&1
     systemctl enable nextiondriver.service > /dev/null 2>&1
+    systemctl enable nextiondriver-shutdown.timer > /dev/null 2>&1
+    if [ "${OS_VER}" -ge "12" ] ; then
+ 	systemctl enable wpsd-nx-bootup.service > /dev/null 2>&1
+	systemctl enable wpsd-nx-reboot.service > /dev/null 2>&1
+	systemctl enable wpsd-nx-shutdown.service > /dev/null 2>&1
+	systemctl enable wpsd-nx-preshutdown.service > /dev/null 2>&1
+    fi
 else
     if grep -qo 'Requires=nextiondriver.service' /lib/systemd/system/mmdvmhost.service ; then # if nextion is re'q, get rid of it
         sed -i '/Requires=nextiondriver.service/d' /lib/systemd/system/mmdvmhost.service
@@ -52,7 +61,13 @@ else
         systemctl stop nextiondriver.service > /dev/null 2>&1
         /usr/bin/killall NextionDriver > /dev/null 2>&1
         systemctl disable nextiondriver.service > /dev/null 2>&1
-        systemctl daemon-reload > /dev/null 2>&1
+	systemctl disable nextiondriver-shutdown.timer > /dev/null 2>&1
+	if [ "${OS_VER}" -ge "12" ] ; then
+ 	    systemctl disable wpsd-nx-bootup.service > /dev/null 2>&1
+	    systemctl disable wpsd-nx-reboot.service > /dev/null 2>&1
+	    systemctl disable wpsd-nx-shutdown.service > /dev/null 2>&1
+	    systemctl disable wpsd-nx-preshutdown.service > /dev/null 2>&1
+	fi
     fi
 fi
 
