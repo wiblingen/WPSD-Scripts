@@ -33,8 +33,7 @@ fi
 
 # Shrink NginX error log to stop it getting out of hand
 #echo "$(tail -500 /var/log/nginx/error.log)" > /var/log/nginx/error.log
-debian_version=$(lsb_release -rs | cut -d. -f1)
-if [ "$debian_version" -lt 12 ]; then
+if [ "${OS_VER}" -lt 12 ]; then
     echo "$(tail -500 /var/log/php7.4-fpm.log)" > /var/log/php7.4-fpm.log
 else
     echo "$(tail -500 /var/log/php8.2-fpm.log)" > /var/log/php8.2-fpm.log
