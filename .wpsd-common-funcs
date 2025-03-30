@@ -20,6 +20,7 @@ uaStrSF="WPSD-SuppFiles Ver.# ${dashVer} Call:${CALL} UUID:${uuidStr} [${osName}
 armbian_env_file="/boot/armbianEnv.txt"
 rc_local_file="/etc/rc.local"
 OptIntoDiags_value=$(grep -Po "OptIntoDiags = \K.*" /etc/WPSD-Dashboard-Config.ini)
+DISPLAY_VALUE=$(grep 'Display=' /etc/mmdvmhost | cut -d'=' -f2)
 
 # Pretty term stuffs ;-)
 if [ -t 1 ] || [ -n "$PS1" ] || [ -n "$FORCE_COLOR" ] ; then # terminal and bash call only...

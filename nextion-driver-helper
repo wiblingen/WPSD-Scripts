@@ -22,8 +22,6 @@ if [ -f '/etc/cron.daily/getstripped' ] || [ -d '/usr/local/etc/Nextion_Support/
     exit 1 # bail - TGIFspot detected.
 fi
 
-DISPLAY_VALUE=$(grep 'Display=' /etc/mmdvmhost | cut -d'=' -f2)
-
 if [ "$DISPLAY_VALUE" == "Nextion" ] ; then # user has Nextion defined in mmdvmhost, so let's natively support it:
     # Check if the GroupsFileSrc and DMRidFileSrc exist in the INI file
     if ! grep -q "^GroupsFileSrc=" /etc/mmdvmhost; then
