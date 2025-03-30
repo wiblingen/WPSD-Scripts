@@ -93,6 +93,13 @@ export GIT_HTTP_CONNECT_TIMEOUT="10"
 export GIT_HTTP_USER_AGENT="WPSD-UpdateCheck (WPSD-Nightly-Tasks) Ver.# ${dashVer} Call:${CALL} UUID:${uuidStr} [${osName}]"
 
 echo -e "\nStopping services..."
+if [ "$DISPLAY_VALUE" == "Nextion" ] ; then
+    if [ "${OS_VER}" -ge "12" ] ; then
+	killall NextionDriver  > /dev/null 2>&1
+	/usr/local/sbin/.wpsd-nextion-text.py /dev/ttyAMA0 t1 "Please Wait..."
+	/usr/local/sbin/.wpsd-nextion-text.py /dev/ttyAMA0 t0 "Auto-Updating..."
+    fi
+fi
 /usr/local/sbin/wpsd-services fullstop > /dev/null 2>&1
 
 echo -e "\nChecking connectivity to WPSD update server..."
