@@ -17,7 +17,6 @@ fi
 #
 
 source /usr/local/sbin/.wpsd-common-funcs
-OS_VER=$( cat /etc/debian_version | sed 's/\..*//')
 hardware=$(grep -i hardware /etc/WPSD-release | awk -F "= " '{print $2}')
 
 MMDVM_HS_VERSION=$(awk -F "=" '/mmdvm_hs/ {print $2}' /usr/local/bin/firmware/versions.txt)
@@ -175,7 +174,7 @@ if [ "$1" ]; then
       VERSION=${RPT_VERSION}
       ;;
     rpt_zum-v0.9)
-      firmware_file="ZUM_MMDVM-Pi_0.9.bin"
+      firmware_file="ZUM_MMDVM-Pi_0.9-F4.bin"
       MMDVM_PI=true
       stmVer="0.7"
       VERSION=${RPT_VERSION}
